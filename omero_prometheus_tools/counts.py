@@ -12,21 +12,22 @@ import yaml
 
 def connect(hostname, username, password):
     client = omero.client(hostname)
-    client.setAgent('prometheus-omero-counts')
+    client.setAgent("prometheus-omero-counts")
     client.createSession(username, password)
     return client
 
 
 SESSION_REQUEST_TIME = Summary(
-    'omero_counts_processing_seconds', 'Time spent counting sessions')
+    "omero_counts_processing_seconds", "Time spent counting sessions"
+)
 
 
 class QueryMetric(object):
     def __init__(self, name, cfg, verbose):
         self.name = name
-        description = cfg['description']
-        self.query = cfg['query']
-        labels = cfg['labels']
+        description = cfg["description"]
+        self.query = cfg["query"]
+        labels = cfg["labels"]
         # Let prometheus_client handle name validation
         self.prometheus_gauge = Gauge(self.name, description, labels)
         self.verbose = verbose
@@ -34,11 +35,10 @@ class QueryMetric(object):
         self.labelsets = set()
 
     def update(self, queryservice):
-        results = queryservice.projection(
-            self.query, None, {'omero.group': '-1'})
+        results = queryservice.projection(self.query, None, {"omero.group": "-1"})
         if not results:
             if self.verbose:
-                print('%s NULL' % self.name)
+                print("%s NULL" % self.name)
         prev_labelsets = self.labelsets
         self.labelsets = set()
         for r in results:
@@ -47,12 +47,12 @@ class QueryMetric(object):
             self.prometheus_gauge.labels(*labelvalues).set(value)
             self.labelsets.add(tuple(labelvalues))
             if self.verbose:
-                print('%s %s %s' % (self.name, labelvalues, value))
+                print("%s %s %s" % (self.name, labelvalues, value))
         # Now delete absent labelsets
         for rm in prev_labelsets.difference(self.labelsets):
             self.prometheus_gauge.remove(*rm)
             if self.verbose:
-                print('Removed %s %s' % (self.name, rm))
+                print("Removed %s %s" % (self.name, rm))
 
 
 class CountMetrics(object):
@@ -67,8 +67,7 @@ class CountMetrics(object):
                 cfg = yaml.load(fh, Loader=yaml.FullLoader)
             for name in cfg:
                 if name in self.metrics:
-                    raise Exception(
-                        'Duplicate metric name found: %s' % name)
+                    raise Exception("Duplicate metric name found: %s" % name)
                 self.metrics[name] = QueryMetric(name, cfg[name], verbose)
 
     @SESSION_REQUEST_TIME.time()
