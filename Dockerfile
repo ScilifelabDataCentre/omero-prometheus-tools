@@ -1,20 +1,23 @@
-FROM continuumio/miniconda3:24.9.2-0 as builder
+FROM python:3.12-slim-bookworm
 
-USER root
+COPY --from=ghcr.io/astral-sh/uv:0.8.9 /uv /uvx /bin/
 
-COPY . /omero-prometheus-tools/
-RUN cd /omero-prometheus-tools/ && \
-     /opt/conda/bin/python -mpip install build && \
-    /opt/conda/bin/python -m build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-######################################################################
+WORKDIR /app
 
-FROM continuumio/miniconda3:24.9.2-0
-# https://jcrist.github.io/conda-docker-tips.html
-RUN /opt/conda/bin/pip install https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl
-RUN /opt/conda/bin/pip install omero-py
-RUN /opt/conda/bin/conda install -y -q -c conda-forge nomkl
+COPY pyproject.toml .
+COPY omero_prometheus_tools/ ./omero-prometheus-tools/
 
-COPY --from=builder /omero-prometheus-tools/dist/*.whl .
-RUN /opt/conda/bin/pip install *.whl
-ENTRYPOINT ["/opt/conda/bin/omero-prometheus-tools.py"]
+RUN uv venv --python 3.12 && uv sync
+RUN useradd -m -u 1000 omero \
+    && chown -R omero:omero /app
+
+USER omero
+EXPOSE 9449
+WORKDIR /data
+
+ENTRYPOINT ["uv", "run", "python", "-m", "omero-prometheus-tools"]
