@@ -13,31 +13,33 @@
 # Optional <STRING>s and <LABEL>s are label values and names
 
 omero_counts_datasets_total:
-  description: Number of datasets in a group
-  query: SELECT COUNT(*), details.group.name FROM Dataset GROUP BY details.group.name
-  labels: [group]
+  description: Number of datasets per group and user_id
+  query: SELECT COUNT(*), details.group.name, details.owner.id FROM Dataset GROUP BY details.group.name, details.owner.id
+  labels: [group, user_id]
 
 omero_counts_filesets_total:
-  description: Number of filesets in a group
-  query: SELECT COUNT(*), details.group.name FROM Fileset GROUP BY details.group.name
-  labels: [group]
+  description: Number of filesets per group and user_id
+  query: SELECT COUNT(*), details.group.name, details.owner.id FROM Fileset GROUP BY details.group.name, details.owner.id
+  labels: [group, user_id]
 
 omero_counts_images_total:
-  description: Number of images in a group
-  query: SELECT COUNT(*), details.group.name FROM Image GROUP BY details.group.name
-  labels: [group]
-
-omero_counts_plate_total:
-  description: Number of plate in a group
-  query: SELECT COUNT(*), details.group.name FROM Plate GROUP BY details.group.name
-  labels: [group]
+  description: Number of images per group and user_id
+  query: SELECT COUNT(*), details.group.name, details.owner.id FROM Image GROUP BY details.group.name, details.owner.id
+  labels: [group, user_id]
 
 omero_counts_projects_total:
-  description: Number of projects in a group
-  query: SELECT COUNT(*), details.group.name FROM Project GROUP BY details.group.name
-  labels: [group]
+  description: Number of projects per group and user_id
+  query: SELECT COUNT(*), details.group.name, details.owner.id FROM Project GROUP BY details.group.name, details.owner.id
+  labels: [group, user_id]
 
-omero_counts_screens_total:
-  description: Number of screens in a group
-  query: SELECT COUNT(*), details.group.name FROM Screen GROUP BY details.group.name
-  labels: [group]
+omero_usage_files_bytes_total:
+  description: Disk space used by original files in bytes per group and user_id
+  query: >-
+    SELECT SUM(origFile.size),
+    group.name, owner.id
+    FROM OriginalFile AS origFile
+    JOIN origFile.details.group AS group
+    JOIN origFile.details.owner AS owner
+    WHERE origFile.size IS NOT NULL
+    GROUP BY group.name, owner.id
+  labels: [group, user_id]

@@ -42,8 +42,10 @@ class QueryMetric(object):
         prev_labelsets = self.labelsets
         self.labelsets = set()
         for r in results:
-            labelvalues = [lv for lv in unwrap(r[1:])]
+            labelvalues = [str(lv) for lv in unwrap(r[1:])]
             value = unwrap(r[0])
+            if value is None:
+                continue
             self.prometheus_gauge.labels(*labelvalues).set(value)
             self.labelsets.add(tuple(labelvalues))
             if self.verbose:
@@ -75,3 +77,4 @@ class CountMetrics(object):
         queryservice = self.client.getSession().getQueryService()
         for metric in self.metrics.values():
             metric.update(queryservice)
+
