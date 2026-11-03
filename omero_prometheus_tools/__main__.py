@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import argparse
+import os
 import sys
 from time import sleep, time
 
 import omero.clients
 from prometheus_client import Gauge, start_http_server
 
-from . import CountMetrics, SessionMetrics
+from . import CountMetrics, SessionMetrics, XfsQuotaMetrics
 
 
 def connect(hostname: str, username: str, password: str):
@@ -43,6 +44,12 @@ def main() -> int:
         default=60,
         help="Interval (seconds) between updates (default: 60)",
     )
+    parser.add_argument(
+        "-q",
+        "--quota-mount",
+        default=os.environ.get("OMERO_QUOTA_MOUNT"),
+        help="XFS mount path for quota metrics (or set OMERO_QUOTA_MOUNT)",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Print verbose output")
     args = parser.parse_args()
 
@@ -66,6 +73,11 @@ def main() -> int:
         else:
             counts = None
 
+        if args.quota_mount:
+            quotas = XfsQuotaMetrics(args.quota_mount, args.verbose)
+        else:
+            quotas = None
+
         sessions = SessionMetrics(client, verbose=args.verbose)
 
         while True:
@@ -73,6 +85,8 @@ def main() -> int:
             sessions.update()
             if counts:
                 counts.update()
+            if quotas:
+                quotas.update()
             endtm = time()
             # HQL queries may take a long time
             sleep(max(args.interval + endtm - starttm, 0))
