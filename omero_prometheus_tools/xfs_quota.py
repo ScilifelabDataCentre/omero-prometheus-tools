@@ -1,82 +1,62 @@
-import subprocess
+import os
+from pathlib import Path
 
 from prometheus_client import Gauge
 
 
 class XfsQuotaMetrics(object):
-    """Collect per-user XFS quota metrics for an OMERO mount point."""
+    """Collect per-group XFS project quota metrics for an OMERO ManagedRepository."""
 
-    def __init__(self, mount_point: str, verbose: bool = False) -> None:
-        self.mount_point = mount_point
+    def __init__(self, mount_point: str | Path, verbose: bool = False) -> None:
+        self.mount_point = Path(mount_point)
         self.verbose = verbose
-        self.labelsets: set[tuple[str, str]] = set()
-        labels = ["group", "user_id"]
-        self.used_gauge = Gauge(
+        self.groups: set[str] = set()
+        self.group_used_gauge = Gauge(
             "omero_xfs_quota_used_bytes",
-            "XFS quota used space in bytes per group and user_id",
-            labels,
+            "XFS project quota used space in bytes per group",
+            ["group"],
         )
-        self.soft_gauge = Gauge(
-            "omero_xfs_quota_soft_limit_bytes",
-            "XFS quota soft limit in bytes per group and user_id",
-            labels,
-        )
-        self.hard_gauge = Gauge(
+        self.group_limit_gauge = Gauge(
             "omero_xfs_quota_hard_limit_bytes",
-            "XFS quota hard limit in bytes per group and user_id",
-            labels,
+            "XFS project quota hard limit in bytes per group",
+            ["group"],
         )
-
-    @staticmethod
-    def _parse_project_target(target: str) -> tuple[str, str]:
-        """Split project target into (group, user_id) if delimited, else ('', target)."""
-        for sep in ("/", ":"):
-            if sep in target:
-                group, user_id = target.split(sep, 1)
-                return group, user_id
-        return "", target
 
     def update(self) -> None:
-        """Run xfs_quota report on mount_point and update Prometheus gauges."""
-        cmd = ["xfs_quota", "-c", "report -p -b -N", self.mount_point]
+        """Scan ManagedRepository groups with os.statvfs and update Prometheus gauges."""
+        repo_dir = self.mount_point / "ManagedRepository"
+        if not repo_dir.is_dir():
+            repo_dir = self.mount_point
+
         try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-        except (subprocess.SubprocessError, OSError) as exc:
+            group_entries = list(repo_dir.iterdir())
+        except OSError as exc:
             if self.verbose:
-                print(f"xfs_quota failed on {self.mount_point}: {exc}")
+                print(f"Cannot scan {repo_dir}: {exc}")
             return
 
-        prev_labelsets = self.labelsets
-        self.labelsets = set()
+        prev_groups = self.groups
+        self.groups = set()
 
-        for line in proc.stdout.splitlines():
-            parts = line.split()
-            if len(parts) < 4:
+        for group_entry in group_entries:
+            if not group_entry.is_dir(
+                follow_symlinks=False
+            ) or group_entry.name.startswith("."):
                 continue
-            labelset = self._parse_project_target(parts[0])
+            group = group_entry.name
             try:
-                # xfs_quota reports blocks in 1 KiB units
-                used_bytes = int(parts[1]) * 1024
-                soft_bytes = int(parts[2]) * 1024
-                hard_bytes = int(parts[3]) * 1024
-            except ValueError:
+                vfs = os.statvfs(group_entry)
+            except OSError:
                 continue
 
-            self.used_gauge.labels(*labelset).set(used_bytes)
-            self.soft_gauge.labels(*labelset).set(soft_bytes)
-            self.hard_gauge.labels(*labelset).set(hard_bytes)
-            self.labelsets.add(labelset)
+            limit_bytes = vfs.f_blocks * vfs.f_frsize
+            used_bytes = (vfs.f_blocks - vfs.f_bfree) * vfs.f_frsize
+            self.group_used_gauge.labels(group).set(used_bytes)
+            self.group_limit_gauge.labels(group).set(limit_bytes)
+            self.groups.add(group)
             if self.verbose:
-                print(
-                    f"xfs_quota {labelset}: used={used_bytes} soft={soft_bytes} hard={hard_bytes}"
-                )
+                print(f"xfs_quota group={group}: used={used_bytes} limit={limit_bytes}")
 
-        for rm in prev_labelsets.difference(self.labelsets):
-            self.used_gauge.remove(*rm)
-            self.soft_gauge.remove(*rm)
-            self.hard_gauge.remove(*rm)
+        for rm_group in prev_groups.difference(self.groups):
+            self.group_used_gauge.remove(rm_group)
+            self.group_limit_gauge.remove(rm_group)
