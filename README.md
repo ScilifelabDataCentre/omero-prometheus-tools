@@ -37,9 +37,9 @@ python -m pip install dist/omero_prometheus_tools-0.3.0-py3-none-any.whl
 Then run the tool:
 
 ```bash
-uv run python -m omero-prometheus-tools \
+uv run python -m omero_prometheus_tools \
     -s omero.scilifelab.se -u <user> -w <password> \
-    -c etc/prometheus-omero-counts.yaml
+    -c omero_prometheus_tools/etc/prometheus-omero-counts.yaml
 ```
 
 Metrics will be published on http://localhost:9449
