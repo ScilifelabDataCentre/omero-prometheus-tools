@@ -28,8 +28,8 @@ Install the package in a fresh virtual environment with Zeroc Ice Glencoe pre-co
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-python -m pip install "https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl"
-python -m pip install dist/omero_prometheus_tools-0.3.0-py3-none-any.whl
+uv pip install "https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl"
+uv pip install dist/omero_prometheus_tools-0.3.0-py3-none-any.whl
 ```
 
 ## Running
