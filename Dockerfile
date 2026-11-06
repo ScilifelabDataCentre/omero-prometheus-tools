@@ -1,6 +1,6 @@
 FROM python:3.12-slim-bookworm
 
-COPY --from=ghcr.io/astral-sh/uv:0.8.9 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.12.8 /uv /uvx /bin/
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
@@ -18,6 +18,5 @@ RUN useradd -m -u 1000 omero \
 
 USER omero
 EXPOSE 9449
-WORKDIR /data
 
 ENTRYPOINT ["uv", "run", "python", "-m", "omero-prometheus-tools"]
