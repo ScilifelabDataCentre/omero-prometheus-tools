@@ -10,7 +10,7 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY pyproject.toml .
-COPY omero_prometheus_tools/ ./omero-prometheus-tools/
+COPY omero_prometheus_tools/ ./omero_prometheus_tools/
 
 RUN uv venv --python 3.12 && uv sync
 RUN useradd -m -u 1000 omero \
