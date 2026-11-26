@@ -13,23 +13,22 @@ from prometheus_client import (
 
 def connect(hostname, username, password):
     client = omero.client(hostname)
-    client.setAgent('prometheus-omero-sessions')
+    client.setAgent("prometheus-omero-sessions")
     client.createSession(username, password)
     return client
 
 
 SESSION_REQUEST_TIME = Summary(
-    'omero_sessions_processing_seconds', 'Time spent counting sessions')
+    "omero_sessions_processing_seconds", "Time spent counting sessions"
+)
 
 
 class SessionMetrics(object):
 
     lastusers = set()
-    g_sessions = Gauge(
-        'omero_sessions_active', 'Active OMERO sessions', ['username'])
-    g_users_total = Gauge('omero_users_total', 'Number of OMERO users',
-                          ['active'])
-    g_groups_total = Gauge('omero_groups_total', 'Number of OMERO groups')
+    g_sessions = Gauge("omero_sessions_active", "Active OMERO sessions", ["username"])
+    g_users_total = Gauge("omero_users_total", "Number of OMERO users", ["active"])
+    g_groups_total = Gauge("omero_groups_total", "Number of OMERO groups")
 
     def __init__(self, client, verbose=False):
         self.client = client
@@ -41,18 +40,17 @@ class SessionMetrics(object):
 
         cb = None
         try:
-            cb = self.client.submit(
-                omero.cmd.CurrentSessionsRequest(), 60, 500)
+            cb = self.client.submit(omero.cmd.CurrentSessionsRequest(), 60, 500)
             rsp = cb.loop(60, 500)
             counts = collections.Counter(c.userName for c in rsp.contexts)
             missing = self.lastusers.difference(counts.keys())
             for m in missing:
                 if self.verbose:
-                    print('%s: %d' % (m, 0))
+                    print("%s: %d" % (m, 0))
                 self.g_sessions.labels(m).set(0)
             for username, n in counts.items():
                 if self.verbose:
-                    print('%s: %d' % (username, n))
+                    print("%s: %d" % (username, n))
                 self.g_sessions.labels(username).set(n)
                 self.lastusers.add(username)
         except omero.CmdError as ce:
@@ -86,6 +84,5 @@ class SessionMetrics(object):
         self.g_groups_total.set(group_count)
 
         if self.verbose:
-            print('Users (active/inactive): %d/%d' % (
-                users_active, users_inactive))
-            print('Groups: %d' % group_count)
+            print("Users (active/inactive): %d/%d" % (users_active, users_inactive))
+            print("Groups: %d" % group_count)

@@ -1,0 +1,27 @@
+[project]
+name = "omero-prometheus-tools"
+version = "0.3.0"
+description = "Tools for monitoring OMERO with Prometheus"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "omero-py>=5.19.6,<5.20.0",
+    "prometheus-client==0.23.1",
+    "zeroc-ice>=3.6.5,<3.7.0"
+]
+
+[tool.uv.sources]
+zeroc-ice = { url = "https://github.com/glencoesoftware/zeroc-ice-py-linux-x86_64/releases/download/20240202/zeroc_ice-3.6.5-cp312-cp312-manylinux_2_28_x86_64.whl" }
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+omero-prometheus-tools = "omero_prometheus_tools.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["omero_prometheus_tools*"]
+
+[tool.setuptools.package-data]
+"*" = ["etc/prometheus-omero-counts.yaml"]
